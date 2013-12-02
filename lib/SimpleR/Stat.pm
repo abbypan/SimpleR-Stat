@@ -28,7 +28,7 @@ sub calc_rate_arrayref {
     my ($r, %opt) = @_;
     my $fields = $opt{calc_fields} || [ 0 .. $#$r ];
 
-    my $num = sum_arrayref([ @{$r}{@$fields} ] );
+    my $num = sum_arrayref([ @{$r}[@$fields] ] );
     push @$r, $num;
 
     for my $i (@{$opt{calc_fields}}){
