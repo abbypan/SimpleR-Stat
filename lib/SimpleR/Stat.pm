@@ -6,6 +6,7 @@ require Exporter;
 @EXPORT = qw( calc_rate calc_rate_arrayref format_percent 
 calc_compare_rate
 sum_arrayref mean_arrayref median_arrayref
+uniq_arrayref uniq_arrayref_cnt
 );
 
 use strict;
@@ -83,6 +84,19 @@ sub median_arrayref {
 
     my $m = ( $n - 1 ) / 2;
     return ( $d[$m] + $d[ $m + 1 ] ) / 2;
+}
+
+sub uniq_arrayref {
+    my ($r) = @_;
+    my %d = map { $_ => 1 } @$r;
+    return [ sort keys(%d) ];
+}
+
+sub uniq_arrayref_cnt {
+    my ($r) = @_;
+    my %d = map { $_ => 1 } @$r;
+    my $c = scalar(keys(%d));
+    return $c;
 }
 
 1;
