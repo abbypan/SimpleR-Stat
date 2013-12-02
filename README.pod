@@ -57,4 +57,28 @@ rate_sub : 对计算出来的rate做进一步处理，例如 3/8 = 0.675，转�
     my ($r2, $diff) = calc_compare_rate(4, 7);
     # $r2 = 0.75, $diff = 3
 
+=head2 sum_arrayref
+
+数组求和
+    
+    my $d = [ 1, 4, 3 ];
+    my $r = sum_arrayref($d);
+    # $r = 8
+
+=head2 mean_arrayref
+
+数组均值
+    
+    my $d = [ 1, 4, 3 ];
+    my $r = mean_arrayref($d);
+    # $r = 2.66666667
+
+=head2 median_arrayref
+
+数组中位数
+    
+    my $d = [ 1, 4, 3 ];
+    my $r = median_arrayref($d);
+    # $r = 3
+
 =cut
