@@ -3,20 +3,25 @@ package SimpleR::Stat;
 
 require Exporter;
 @ISA    = qw(Exporter);
-@EXPORT = qw( calc_rate calc_rate_arrayref format_percent 
-calc_compare_rate
-sum_arrayref mean_arrayref median_arrayref
-uniq_arrayref uniq_arrayref_cnt
-conv_arrayref_to_hash
+@EXPORT = qw(
+  calc_rate format_percent calc_compare_rate
+
+  uniq_arrayref uniq_arrayref_cnt
+  sum_arrayref mean_arrayref median_arrayref
+  calc_rate_arrayref calc_percent_arrayref
+  map_arrayref
+
+  conv_arrayref_to_hash
 );
 
 use strict;
 use warnings;
 
-our $VERSION     = 0.04;
+our $VERSION     = 0.05;
 our $DEFAULT_SEP = ',';
 
 sub conv_arrayref_to_hash {
+
     #注意:重复的cut_fields会被覆盖掉
     my ( $data, $cut_fields, $v_field ) = @_;
     my $finish_cut = pop @$cut_fields;
@@ -26,28 +31,127 @@ sub conv_arrayref_to_hash {
         my $s = \%result;
 
         for my $cut (@$cut_fields) {
-            my $c = map_arrayref_row( $row, $cut );
+            my $c = calc_arrayref_cell( $row, $cut );
             $s->{$c} ||= {};
             $s = $s->{$c};
         }
 
-        my $fin_c = map_arrayref_row( $row, $finish_cut );
-        my $v     = map_arrayref_row( $row, $v_field );
+        my $fin_c = calc_arrayref_cell( $row, $finish_cut );
+        my $v     = calc_arrayref_cell( $row, $v_field );
         $s->{$fin_c} = $v;
     }
 
     return \%result;
 } ## end sub conv_ref_to_hash
 
-sub map_arrayref_row {
+sub calc_arrayref_cell {
     my ( $row, $calc ) = @_;
 
+    #calc => sub , [ .. ], row->[$i]
+
     my $t = ref($calc);
-    my $v = ($t eq 'CODE') ? $calc->($row) : 
-    ($t eq 'ARRAY') ? join($DEFAULT_SEP,  @{$row}[@$calc]) :
-    $row->[$calc];
+    my $v =
+        ( $t eq 'CODE' ) ? $calc->($row)
+      : ( $t eq 'ARRAY' ) ? join( $DEFAULT_SEP, @{$row}[@$calc] )
+      :                     $row->[$calc];
 
     return $v;
+}
+
+#-----
+
+sub map_arrayref {
+    my ( $r, $calc_sub, %opt ) = @_;
+    my @data = $opt{keep_source} ? @$r : ();
+
+    my $col = $opt{calc_col} || [ 0 .. $#$r ];
+    my $res = $calc_sub->( [ @{$r}[@$col] ] );
+    push @data, ref($res) eq 'ARRAY' ? @$res : $res;
+
+    return $opt{return_arrayref} ? \@data : @data;
+}
+
+sub calc_percent_arrayref {
+    my ( $r, $format ) = @_;
+    my $rate = calc_rate_arrayref($r);
+    my @percent = map { format_percent( $_, $format ) } @$rate;
+    return \@percent;
+}
+
+sub calc_rate_arrayref {
+    my ($r) = @_;
+    $_ ||= 0 for @$r;
+
+    my $s = sum_arrayref($r);
+
+    my @rate;
+    for my $n (@$r) {
+        my $x = $s == 0 ? 0 : calc_rate( $n, $s );
+        push @rate, $x;
+    }
+
+    return \@rate;
+}
+
+sub sum_arrayref {
+    my ($r) = @_;
+    my $num = 0;
+    $num += $_ || 0 for @$r;
+    return $num;
+}
+
+sub mean_arrayref {
+    my ($r) = @_;
+    my $n = scalar(@$r);
+    return calc_rate( sum_arrayref($r), $n );
+}
+
+sub median_arrayref {
+    my ($r) = @_;
+    my $n = $#$r;
+
+    my @d = sort { $a <=> $b } @$r;
+
+    return $d[ $n / 2 ] if ( $n % 2 == 0 );
+
+    my $m = ( $n - 1 ) / 2;
+    return ( $d[$m] + $d[ $m + 1 ] ) / 2;
+}
+
+sub uniq_arrayref {
+    my ($r) = @_;
+    my %d = map { $_ => 1 } @$r;
+    my @sort = sort keys(%d);
+    return \@sort;
+}
+
+sub uniq_arrayref_cnt {
+    my ($r) = @_;
+    my %d = map { $_ => 1 } @$r;
+    my $c = scalar( keys(%d) );
+    return $c;
+}
+
+#----
+sub calc_compare_rate {
+    my ( $old, $new ) = @_;
+    $old ||= 0;
+    $new ||= 0;
+    my $diff = $new - $old;
+
+    my $rate =
+        ( $old == $new ) ? 0
+      : ( $new == 0 )    ? -1
+      : ( $old == 0 )    ? 1
+      :                    $diff / $old;
+    return wantarray ? ( $rate, $diff ) : $rate;
+} ## end sub calc_compare_rate
+
+sub format_percent {
+    my ( $rate, $format ) = @_;
+    $format ||= "%.2f%%";
+    $format = "%d%%" if ( $rate == 0 || $rate == 1 );
+    return sprintf( $format, 100 * $rate );
 }
 
 sub calc_rate {
@@ -59,81 +163,4 @@ sub calc_rate {
     return $rate;
 } ## end sub calc_rate
 
-sub calc_rate_arrayref {
-    my ($r, %opt) = @_;
-    my $fields = $opt{calc_fields} || [ 0 .. $#$r ];
-
-    my $num = sum_arrayref([ @{$r}[@$fields] ] );
-    push @$r, $num;
-
-    for my $i (@{$opt{calc_fields}}){
-        $r->[$i] ||= 0;
-        my $x = calc_rate($r->[$i], $num);
-        $x = $opt{rate_sub}->($x) if(exists $opt{rate_sub});
-        push @$r, $x;
-    }
-
-    return $r;
-}
-
-sub format_percent {
-    my ( $rate, $format ) = @_;
-    $format ||= "%.2f%%";
-    $format = "%d%%" if ( $rate == 0 || $rate == 1 );
-    return sprintf( $format, 100 * $rate );
-}
-
-sub calc_compare_rate {
-    my ( $old, $new ) = @_;
-    $old ||= 0;
-    $new ||= 0;
-    my $diff = $new-$old;
-
-    my $rate = ($old == $new) ? 0 : 
-    ($new == 0 ) ? -1 :
-    ($old == 0 ) ? 1 :
-    $diff / $old;
-    return wantarray ? ($rate, $diff) : $rate;
-} ## end sub calc_compare_rate
-
-sub sum_arrayref {
-    my ($r) = @_;
-    my $num=0;
-    $num += $_ || 0 for @$r;
-    return $num;
-}
-
-sub mean_arrayref {
-    my ($data) = @_;
-    my $n = scalar(@$data);
-    return calc_rate( sum_arrayref($data), $n );
-}
-
-sub median_arrayref {
-    my ($data) = @_;
-    my $n = $#$data;
-
-    my @d = sort { $a <=> $b } @$data;
-
-    return $d[ $n / 2 ] if ( $n % 2 == 0 );
-
-    my $m = ( $n - 1 ) / 2;
-    return ( $d[$m] + $d[ $m + 1 ] ) / 2;
-}
-
-sub uniq_arrayref {
-    my ($r) = @_;
-    my %d = map { $_ => 1 } @$r;
-    return [ sort keys(%d) ];
-}
-
-sub uniq_arrayref_cnt {
-    my ($r) = @_;
-    my %d = map { $_ => 1 } @$r;
-    my $c = scalar(keys(%d));
-    return $c;
-}
-
 1;
-
-

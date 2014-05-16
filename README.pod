@@ -12,13 +12,13 @@ L<SimpleR::Stat> Simple Stat on arrayref, like sum, mean, calc rate, etc
 
 传入 scalar num / arrayref，计算 sum 求和, mean 均值, rate 比例 等
 
-=head1 FUNCTION
-
 =begin html
 
 实例参考<a href="xt/">xt子文件夹</a>
 
 =end html
+
+=head1 BASE FUNCTION
 
 =head2 calc_rate
 
@@ -26,22 +26,6 @@ L<SimpleR::Stat> Simple Stat on arrayref, like sum, mean, calc rate, etc
 
     my $r = calc_rate(3, 4);
     # $r = 0.75
-
-=head2 calc_rate_arrayref
-
-将数组中某些项求和，并计算比例，最后传入原来的数组
-
-calc_fields : 指定数组中的项
-
-rate_sub : 对计算出来的rate做进一步处理，例如 3/8 = 0.675，转换成 67.50
-
-    my $data = [ '2013-10-22', 'gym', 3, 4, 1 , 'china' ];
-    my $r = calc_rate_arrayref($data, 
-            calc_fields => [ 2, 3, 4 ], 
-            rate_sub => sub { sprintf("%.2f", 100*$_[0]) },
-    );
-    # $r =  [ '2013-10-22', 'gym',   3,     4,     1 , 'china' , 
-    #                         8, 37.50, 50.00, 12.50 ];
 
 =head2 format_percent
 
@@ -58,6 +42,48 @@ rate_sub : 对计算出来的rate做进一步处理，例如 3/8 = 0.675，转�
     # $r = 0.75
     my ($r2, $diff) = calc_compare_rate(4, 7);
     # $r2 = 0.75, $diff = 3
+
+=head1 FUNCTION
+
+=head2 calc_rate_arrayref
+
+    my @data = (3, 4, 1);
+    my $r = calc_rate_arrayref(\@data);
+    dump($r);
+    #$r:[0.375, 0.5, 0.125]
+
+
+=head2 map_arrayref($data, $calc_sub, %option)
+取出数组中某些项，做指定运算，返回结果
+
+参数：
+
+return_arrayref 以arraryref格式返回结果，默认是以array格式返回
+
+keep_source 返回的结果中保留原始数据
+
+calc_col 指定数组中的项
+
+    my $data=[ 'haha', 'xx', 4 , 2, 3, 1, 'heihei'];
+    my @res = map_arrayref(
+        $data, 
+        \&calc_rate_arrayref,
+
+        calc_col => [ 2 .. 5 ], 
+
+        return_arrayref => 1, 
+        keep_source => 1, 
+    );
+    # [ "haha", "xx", 4, 2, 3, 1, "heihei", 0.4, 0.2, 0.3, 0.1 ] 
+    #keep_source => 1, return_arrayref=> 0 : ( "haha", "xx", 4, 2, 3, 1, "heihei", 0.4, 0.2, 0.3, 0.1 )
+    #keep_source => 0, return_arrayref=> 1 : [ 0.4, 0.2, 0.3, 0.1 ] 
+
+=head2 calc_percent_arrayref
+
+    my @data = (3, 4, 1);
+    my $r = calc_percent_arrayref(\@data);
+    dump($r);
+    #$r : ["37.50%", "50.00%", "12.50%"]
 
 =head2 sum_arrayref
 
@@ -98,6 +124,8 @@ rate_sub : 对计算出来的rate做进一步处理，例如 3/8 = 0.675，转�
     my $d = [ 1, 1, 4, 4, 3 ];
     my $r = uniq_arrayref_cnt($d);
     # $r = 3
+
+=head1 OTHER FUNCTION
 
 =head2 conv_arrayref_to_hash 
 
