@@ -75,6 +75,14 @@ sub calc_percent_arrayref {
     my ( $r, $format ) = @_;
     my $rate = calc_rate_arrayref($r);
     my @percent = map { format_percent( $_, $format ) } @$rate;
+
+    my @pn = map { s/\%// } @percent;
+    my $ps = sum_arrayref(\@pn);
+    if($ps>100){
+        $pn[-1] = 100 - ($ps - $pn[-1]);
+        @percent = map { "$_%" } @pn;
+    }
+
     return \@percent;
 }
 
@@ -108,6 +116,8 @@ sub mean_arrayref {
 
 sub median_arrayref {
     my ($r) = @_;
+    $_ ||= 0 for @$r;
+
     my $n = $#$r;
 
     my @d = sort { $a <=> $b } @$r;
@@ -163,4 +173,40 @@ sub calc_rate {
     return $rate;
 } ## end sub calc_rate
 
+#sub conv_hash_to_arrayref {
+    #my ($hash) = @_;
+    #my @data;
+    #while ( my ( $k, $v ) = each %$hash ) {
+        #my @temp = ($k);
+        #while ( ref($v) eq 'HASH' ) {
+            #while ( my ( $kt, $vt ) = each %$v ) {
+                #push @temp, $kt;
+            #}
+            #$v = $vt;
+        #}
+        #push @temp, $v;
+        #push @data, \@temp;
+    #}
+    #return \@data;
+#} ## end sub conv_hash_to_ref
+
+#sub transpose_arrayref {    #二层数组的行列转置
+    #my ($array_ref) = @_;
+    #my $col_num = $#$array_ref;
+    #my $row_num = max map { $#$_ } @$array_ref;
+
+    #my @data;
+    #for my $r ( 0 .. $row_num ) {
+        #my @temp = map { $array_ref->[$_][$r] } ( 0 .. $col_num );
+        #push @data, \@temp;
+    #}
+
+    #return \@data;
+#} ## end sub conv_col_to_row
+
+#sub get_compare_prefix {
+    #my ($vary) = @_;
+    #return ( $vary > 0 ? '+' : '' );
+#} ## 
+    
 1;

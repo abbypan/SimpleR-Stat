@@ -56,10 +56,11 @@ calc_col : 指定数组中的项
     #keep_source => 1, return_arrayref=> 0 : ( "haha", "xx", 4, 2, 3, 1, "heihei", 0.4, 0.2, 0.3, 0.1 )
     #keep_source => 0, return_arrayref=> 1 : [ 0.4, 0.2, 0.3, 0.1 ] 
 
-=head2 calc_percent_arrayref
+=head2 calc_percent_arrayref($arr, $format);
 
+    my $format = "%.2f%%";
     my @data = (3, 4, 1);
-    my $r = calc_percent_arrayref(\@data);
+    my $r = calc_percent_arrayref(\@data, $format);
     dump($r);
     #$r : ["37.50%", "50.00%", "12.50%"]
 
