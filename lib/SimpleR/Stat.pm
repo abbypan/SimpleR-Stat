@@ -17,16 +17,20 @@ require Exporter;
 use strict;
 use warnings;
 
-our $VERSION     = 0.05;
+use Tie::Autotie 'Tie::IxHash';
+
+
+our $VERSION     = 0.06;
 our $DEFAULT_SEP = ',';
 
 sub conv_arrayref_to_hash {
 
     #注意:重复的cut_fields会被覆盖掉
-    my ( $data, $cut_fields, $v_field ) = @_;
+    my ( $data, $cut_fields, $v_field , %opt) = @_;
     my $finish_cut = pop @$cut_fields;
 
-    my %result;
+    tie my (%result), 'Tie::IxHash' if($opt{remember_key_order});
+
     for my $row (@$data) {
         my $s = \%result;
 
@@ -129,9 +133,13 @@ sub median_arrayref {
 }
 
 sub uniq_arrayref {
-    my ($r) = @_;
-    my %d = map { $_ => 1 } @$r;
-    my @sort = sort keys(%d);
+    my ($r, %opt) = @_;
+
+    tie my (%d), 'Tie::IxHash' if($opt{remember_key_order});
+    %d = map { $_ => 1 } @$r;
+
+    my @sort = keys(%d);
+    @sort = sort @sort unless($opt{remember_key_order});
     return \@sort;
 }
 
