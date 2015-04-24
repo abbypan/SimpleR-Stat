@@ -10,7 +10,9 @@ require Exporter;
   sum_arrayref mean_arrayref median_arrayref
   calc_rate_arrayref calc_percent_arrayref
   map_arrayref
+  sort_by_other_arrayref
 
+  transpose_arrayref
   conv_arrayref_to_hash
 );
 
@@ -20,11 +22,26 @@ use warnings;
 use Tie::Autotie 'Tie::IxHash';
 
 
-our $VERSION     = 0.06;
+our $VERSION     = 0.07;
 our $DEFAULT_SEP = ',';
 
-sub conv_arrayref_to_hash {
+sub transpose_arrayref {    #二层数组的行列转置
+    my ($array_ref) = @_;
 
+    my @row_num_list = sort { $b <=> $a } map { $#$_ } @$array_ref;
+    my $row_num = $row_num_list[0];
+
+    my $col_num = $#$array_ref;
+
+    my @data;
+    for my $r ( 0 .. $row_num ) {
+        my @temp = map { $array_ref->[$_][$r] } ( 0 .. $col_num );
+        push @data, \@temp;
+    }
+    return \@data;
+} 
+
+sub conv_arrayref_to_hash {
     #注意:重复的cut_fields会被覆盖掉
     my ( $data, $cut_fields, $v_field , %opt) = @_;
     my $finish_cut = pop @$cut_fields;
@@ -63,6 +80,16 @@ sub calc_arrayref_cell {
 }
 
 #-----
+sub sort_by_other_arrayref {
+    my ($arr, $other, $map_sub, $sort_sub) = @_;
+    $sort_sub ||= sub { my ($x, $y) = @_; return $x <=> $y; };
+
+    my @sort = (! $map_sub)?
+        sort { $sort_sub->($other->[$a] , $other->[$b]) } (0 .. $#$other) :
+        sort { $sort_sub->($map_sub->($other->[$a]) , $map_sub->($other->[$b])) } (0 .. $#$other) ;
+
+    return wantarray ? ([ @{$arr}[@sort] ], [ @{$other}[@sort] ]) : [ @{$arr}[@sort] ];
+}
 
 sub map_arrayref {
     my ( $r, $calc_sub, %opt ) = @_;
@@ -197,20 +224,6 @@ sub calc_rate {
     #}
     #return \@data;
 #} ## end sub conv_hash_to_ref
-
-#sub transpose_arrayref {    #二层数组的行列转置
-    #my ($array_ref) = @_;
-    #my $col_num = $#$array_ref;
-    #my $row_num = max map { $#$_ } @$array_ref;
-
-    #my @data;
-    #for my $r ( 0 .. $row_num ) {
-        #my @temp = map { $array_ref->[$_][$r] } ( 0 .. $col_num );
-        #push @data, \@temp;
-    #}
-
-    #return \@data;
-#} ## end sub conv_col_to_row
 
 #sub get_compare_prefix {
     #my ($vary) = @_;
